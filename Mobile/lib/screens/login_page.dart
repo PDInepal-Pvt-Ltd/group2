@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/custom_text_field.dart';
 import 'register_page.dart';
+import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,7 +19,7 @@ class _LoginPageState extends State<LoginPage>
   late Animation<Offset> _slideAnimation;
 
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
@@ -38,17 +39,48 @@ class _LoginPageState extends State<LoginPage>
   @override
   void dispose() {
     _controller.dispose();
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      // Perform login logic
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Logging in...')));
+
+      final result = await ApiService.login(
+        _usernameController.text.trim(),
+        _passwordController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (result['success']) {
+        // Fetch profile to get role
+        final user = await ApiService.getProfile();
+        if (user != null && mounted) {
+          final role = user.role?.toLowerCase() ?? 'employee';
+          await ApiService.saveRole(role);
+          if (role == 'admin') {
+            Navigator.pushReplacementNamed(context, '/admin-home');
+          } else if (role == 'manager') {
+            Navigator.pushReplacementNamed(context, '/manager-home');
+          } else {
+            Navigator.pushReplacementNamed(context, '/client-home');
+          }
+        } else {
+          Navigator.pushReplacementNamed(context, '/client-home');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -164,17 +196,15 @@ class _LoginPageState extends State<LoginPage>
                               ),
                             ),
                             const SizedBox(height: 20),
-                            // Email Field
+                            // Username Field
                             CustomTextField(
                               autofocus: true,
-                              hintText: 'Email',
-                              controller: _emailController,
+                              hintText: 'Username',
+                              controller: _usernameController,
+                              keyboardType: TextInputType.text,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
+                                  return 'Please enter your username';
                                 }
                                 return null;
                               },

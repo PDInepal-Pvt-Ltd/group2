@@ -7,6 +7,9 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final bool autofocus;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const CustomTextField({
     super.key,
@@ -15,6 +18,9 @@ class CustomTextField extends StatelessWidget {
     this.controller,
     this.validator,
     this.autofocus = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -29,6 +35,9 @@ class CustomTextField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         validator: validator,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        onFieldSubmitted: onFieldSubmitted,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: GoogleFonts.poppins(color: Colors.grey),

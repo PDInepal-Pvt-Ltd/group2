@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
 
 class ManagerAddProjectScreen extends StatefulWidget {
   const ManagerAddProjectScreen({super.key});
@@ -140,12 +141,35 @@ class _ManagerAddProjectScreenState extends State<ManagerAddProjectScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      // TODO: Implement project creation logic
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Creating Project...')),
                       );
+
+                      final projectData = {
+                        'name': _titleController.text,
+                        'description': _descriptionController.text,
+                      };
+
+                      final result = await ApiService.createProject(
+                        projectData,
+                      );
+
+                      if (!mounted) return;
+
+                      if (result['success']) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Project Created Successfully!'),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'])),
+                        );
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(

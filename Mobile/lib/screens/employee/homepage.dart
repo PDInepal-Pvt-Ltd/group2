@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/user_model.dart';
+import '../../models/task_model.dart';
+import '../../services/api_service.dart';
 
 class ClientHomepage extends StatefulWidget {
   const ClientHomepage({super.key});
@@ -9,8 +12,47 @@ class ClientHomepage extends StatefulWidget {
 }
 
 class _ClientHomepageState extends State<ClientHomepage> {
+  User? _user;
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final user = await ApiService.getProfile();
+    final tasks = await ApiService.getMyTasks();
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final assigned = _tasks.length;
+    final completed = _tasks.where((t) => t.status == 'completed').length;
+    final overdue = _tasks.where((t) {
+      if (t.dueDate == null) return false;
+      try {
+        final due = DateTime.parse(t.dueDate!);
+        return due.isBefore(DateTime.now()) && t.status != 'completed';
+      } catch (e) {
+        return false;
+      }
+    }).length;
+
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light background for contrast
       body: SingleChildScrollView(
@@ -54,7 +96,7 @@ class _ClientHomepageState extends State<ClientHomepage> {
                         ),
                       ),
                       title: Text(
-                        'John Doe', // TODO: Replace with actual user name
+                        _user?.username ?? 'User',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -70,7 +112,7 @@ class _ClientHomepageState extends State<ClientHomepage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Client',
+                            _user?.role?.toUpperCase() ?? 'EMPLOYEE',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -79,10 +121,8 @@ class _ClientHomepageState extends State<ClientHomepage> {
                         ],
                       ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () {
-                          // Navigate to settings or profile
-                        },
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _loadData,
                       ),
                     ),
                   ),
@@ -90,11 +130,23 @@ class _ClientHomepageState extends State<ClientHomepage> {
                   // Stats Row
                   Row(
                     children: [
-                      _buildStatCard('Assigned Projects', '10', Colors.blue),
+                      _buildStatCard(
+                        'Assigned Tasks',
+                        '$assigned',
+                        Colors.blue,
+                      ),
                       const SizedBox(width: 12),
-                      _buildStatCard('Completed Projects', '5', Colors.orange),
+                      _buildStatCard(
+                        'Completed Tasks',
+                        '$completed',
+                        Colors.orange,
+                      ),
                       const SizedBox(width: 12),
-                      _buildStatCard('Overdue Projects', '5', Colors.purple),
+                      _buildStatCard(
+                        'Overdue Tasks',
+                        '$overdue',
+                        Colors.purple,
+                      ),
                     ],
                   ),
                 ],
@@ -143,23 +195,31 @@ class _ClientHomepageState extends State<ClientHomepage> {
                         ),
                         const SizedBox(height: 8),
                         // Task Tiles
-                        _buildTaskTile(
-                          title: 'Mobile App Redesign',
-                          manager: 'Alice Smith',
-                          progress: 0.75,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Backend API Integration',
-                          manager: 'Bob Jones',
-                          progress: 0.40,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Marketing Campaign',
-                          manager: 'Charlie Brown',
-                          progress: 0.90,
-                        ),
+                        if (_tasks.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              'No tasks assigned.',
+                              style: GoogleFonts.poppins(color: Colors.white70),
+                            ),
+                          )
+                        else
+                          ..._tasks
+                              .take(5)
+                              .map(
+                                (task) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: _buildTaskTile(
+                                    title: task.title,
+                                    manager: task.groupName ?? 'No Group',
+                                    progress: task.status == 'completed'
+                                        ? 1.0
+                                        : (task.status == 'in_progress'
+                                              ? 0.5
+                                              : 0.1),
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
                   ),
@@ -197,7 +257,10 @@ class _ClientHomepageState extends State<ClientHomepage> {
                             ),
                           ],
                         ),
-                        Text('No Announcements', style: GoogleFonts.poppins(color: Colors.white),)
+                        Text(
+                          'No Announcements',
+                          style: GoogleFonts.poppins(color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
@@ -263,7 +326,7 @@ class _ClientHomepageState extends State<ClientHomepage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(10),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -302,7 +365,7 @@ class _ClientHomepageState extends State<ClientHomepage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Assigned to: $manager',
+            'Project: $manager',
             style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
@@ -314,7 +377,7 @@ class _ClientHomepageState extends State<ClientHomepage> {
             borderRadius: BorderRadius.circular(6),
           ),
         ],
-        ),
+      ),
     );
   }
 }

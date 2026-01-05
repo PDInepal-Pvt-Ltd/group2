@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
+import '../../models/user_model.dart';
+import '../../models/task_model.dart';
 
 class ManagerHomepage extends StatefulWidget {
   const ManagerHomepage({super.key});
@@ -9,8 +12,37 @@ class ManagerHomepage extends StatefulWidget {
 }
 
 class _ManagerHomepageState extends State<ManagerHomepage> {
+  User? _user;
+  Map<String, dynamic> _stats = {};
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final user = await ApiService.getProfile();
+    final stats = await ApiService.getAdminDashboardStats();
+    final tasks = await ApiService.getMyTasks();
+
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _stats = stats;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: Colors.grey[50], // Light background for contrast
       body: SingleChildScrollView(
@@ -54,7 +86,7 @@ class _ManagerHomepageState extends State<ManagerHomepage> {
                         ),
                       ),
                       title: Text(
-                        'John Doe', // TODO: Replace with actual user name
+                        _user?.username ?? 'Manager',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -90,11 +122,23 @@ class _ManagerHomepageState extends State<ManagerHomepage> {
                   // Stats Row
                   Row(
                     children: [
-                      _buildStatCard('Assigned Projects', '10', Colors.blue),
+                      _buildStatCard(
+                        'Assigned Tasks',
+                        '${_tasks.length}',
+                        Colors.blue,
+                      ),
                       const SizedBox(width: 12),
-                      _buildStatCard('Completed Projects', '5', Colors.orange),
+                      _buildStatCard(
+                        'Total Projects',
+                        '${_stats['total_projects'] ?? 0}',
+                        Colors.orange,
+                      ),
                       const SizedBox(width: 12),
-                      _buildStatCard('Overdue Projects', '5', Colors.purple),
+                      _buildStatCard(
+                        'Total Employees',
+                        '${_stats['total_employees'] ?? 0}',
+                        Colors.purple,
+                      ),
                     ],
                   ),
                 ],
@@ -143,23 +187,29 @@ class _ManagerHomepageState extends State<ManagerHomepage> {
                         ),
                         const SizedBox(height: 8),
                         // Task Tiles
-                        _buildTaskTile(
-                          title: 'Mobile App Redesign',
-                          manager: 'Alice Smith',
-                          progress: 0.75,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Backend API Integration',
-                          manager: 'Bob Jones',
-                          progress: 0.40,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Marketing Campaign',
-                          manager: 'Charlie Brown',
-                          progress: 0.90,
-                        ),
+                        if (_tasks.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              'No tasks assigned',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        else
+                          ..._tasks
+                              .take(3)
+                              .map(
+                                (task) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: _buildTaskTile(
+                                    title: task.title,
+                                    manager: task.groupName ?? 'General',
+                                    progress: task.status == 'completed'
+                                        ? 1.0
+                                        : 0.4,
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
                   ),

@@ -2,6 +2,9 @@ import 'package:clientx/screens/manager/edit_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../services/api_service.dart';
+import '../login_page.dart';
+
 class ManagerProfile extends StatelessWidget {
   const ManagerProfile({super.key});
 
@@ -148,7 +151,61 @@ class ManagerProfile extends StatelessWidget {
                 context,
                 title: 'Log Out',
                 onTap: () {
-                  // Implement logout logic
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        title: Text(
+                          'Confirm Logout',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Text(
+                          'Are you sure you want to log out?',
+                          style: GoogleFonts.poppins(),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(
+                              'Cancel',
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              Navigator.of(context).pop(); // Close dialog
+                              await ApiService.logout();
+                              // Since this is inside a dialog, context is still valid for navigation
+                              // but to be safe and clean:
+                              if (context.mounted) {
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginPage(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF182C4C),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Log Out',
+                              style: GoogleFonts.poppins(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
                 isLast: true,
               ),

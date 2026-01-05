@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/custom_text_field.dart';
+import '../services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -16,6 +17,8 @@ class _RegisterPageState extends State<RegisterPage>
   late Animation<Offset> _slideAnimation;
 
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -38,6 +41,8 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   void dispose() {
     _controller.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -45,12 +50,40 @@ class _RegisterPageState extends State<RegisterPage>
     super.dispose();
   }
 
-  void _signup() {
+  Future<void> _signup() async {
     if (_formKey.currentState!.validate()) {
-      // Perform signup logic
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Signing up...')));
+
+      final userData = {
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+      };
+
+      final result = await ApiService.register(userData);
+
+      if (!mounted) return;
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful! Please login.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Go back to login
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Registration failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -114,8 +147,33 @@ class _RegisterPageState extends State<RegisterPage>
                             // Form Fields
                             CustomTextField(
                               autofocus: true,
+                              hintText: 'First Name',
+                              controller: _firstNameController,
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your first name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            CustomTextField(
+                              hintText: 'Last Name',
+                              controller: _lastNameController,
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your last name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            CustomTextField(
                               hintText: 'Username',
                               controller: _usernameController,
+                              textInputAction: TextInputAction.next,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter a username';
@@ -127,6 +185,8 @@ class _RegisterPageState extends State<RegisterPage>
                             CustomTextField(
                               hintText: 'Email',
                               controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your email';
@@ -142,6 +202,7 @@ class _RegisterPageState extends State<RegisterPage>
                               hintText: 'Password',
                               obscureText: true,
                               controller: _passwordController,
+                              textInputAction: TextInputAction.next,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter a password';
@@ -157,6 +218,8 @@ class _RegisterPageState extends State<RegisterPage>
                               hintText: 'Confirm Password',
                               obscureText: true,
                               controller: _confirmPasswordController,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _signup(),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please confirm your password';

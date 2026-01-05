@@ -1,19 +1,70 @@
+import 'package:clientx/screens/employee/notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
+import '../../models/task_model.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
   @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  Map<String, dynamic> _stats = {};
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final stats = await ApiService.getAdminDashboardStats();
+    final tasks = await ApiService.getMyTasks();
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Analytics', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        backgroundColor: Color(0xFF182C4C),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
             // Header Section with Primary Color
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 60, 16, 10),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
               decoration: const BoxDecoration(
                 color: Color(0xFF182C4C),
                 borderRadius: BorderRadius.only(
@@ -24,16 +75,6 @@ class AnalyticsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Text(
-                      'Analytics',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
                   // const SizedBox(height: 30),
                   _buildOverviewCards(),
                 ],
@@ -65,31 +106,31 @@ class AnalyticsScreen extends StatelessWidget {
       mainAxisSpacing: 16,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.65,
+      childAspectRatio: 2.2,
       children: [
         _buildStatCard(
           title: 'Total Projects',
-          value: '12',
+          value: '${_stats['total_projects'] ?? 0}',
           icon: Icons.folder_open,
           color: Colors.blue,
         ),
         _buildStatCard(
           title: 'Active Tasks',
-          value: '5',
+          value: '${_tasks.where((t) => t.status != 'completed').length}',
           icon: Icons.task_alt,
           color: Colors.orange,
         ),
         _buildStatCard(
-          title: 'Hours Spent',
-          value: '128',
-          icon: Icons.timer,
-          color: Colors.purple,
-        ),
-        _buildStatCard(
-          title: 'Completed',
-          value: '8',
+          title: 'Completed Tasks',
+          value: '${_tasks.where((t) => t.status == 'completed').length}',
           icon: Icons.check_circle_outline,
           color: Colors.green,
+        ),
+        _buildStatCard(
+          title: 'Total Tasks',
+          value: '${_tasks.length}',
+          icon: Icons.list_alt,
+          color: Colors.purple,
         ),
       ],
     );
@@ -102,10 +143,10 @@ class AnalyticsScreen extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -114,30 +155,40 @@ class AnalyticsScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -252,21 +303,31 @@ class AnalyticsScreen extends StatelessWidget {
               ),
             ),
           ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
-            separatorBuilder: (context, index) => const SizedBox(height: 4),
-            itemBuilder: (context, index) {
-              return _buildActivityTile(index);
-            },
-          ),
+          if (_tasks.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'No recent activity',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _tasks.length > 5 ? 5 : _tasks.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final task = _tasks[index];
+                return _buildActivityTile(task);
+              },
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityTile(int index) {
+  Widget _buildActivityTile(Task task) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -279,15 +340,15 @@ class AnalyticsScreen extends StatelessWidget {
           child: const Icon(Icons.history, color: Colors.blue, size: 20),
         ),
         title: Text(
-          'Project "Alpha" status updated',
+          'Task "${task.title}" updated',
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          'Updated to "In Progress"',
+          'Status: ${task.status.toUpperCase()}',
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         trailing: Text(
-          '2h ago',
+          task.dueDate != null ? task.dueDate!.split('T')[0] : 'N/A',
           style: TextStyle(fontSize: 12, color: Colors.grey[400]),
         ),
       ),

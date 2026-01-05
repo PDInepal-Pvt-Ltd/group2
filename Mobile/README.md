@@ -2,55 +2,26 @@
 
 ClientX is a comprehensive Client Management System built with Flutter. It facilitates interaction between administrators and clients, allowing for efficient management of projects, tasks, and analytics.
 
-## Features
+# ClientX (Mobile)
 
-### Admin Module
+Mobile client for ClientX built with Flutter.
 
-The administrator interface provides a high-level overview and management capabilities:
+See the global overview for architecture and run order: [../GLOBAL_README.md](../GLOBAL_README.md)
 
-- **Dashboard**: View key statistics like Total Clients, Projects, and Tasks.
-- **Analytics**: Visualization of revenue, active users, and new projects.
-- **Client Management**: List and manage client accounts and statuses.
-- **Project Management**: Track active projects and their progress.
-- **Notifications**: Stay updated with system alerts, new requests, and task completions.
+Features (high level): Admin dashboard, client views, project/task management, analytics, and notifications.
 
-### Client Module
+Quick start:
 
-The client interface allows users to manage their specific work items:
+```bash
+# ensure Flutter is installed: https://docs.flutter.dev/get-started/install
+flutter pub get
+flutter run
+```
 
-- **Home**: Overview of assigned projects and tasks.
-- **Project Management**: Create and view projects.
-- **Task Management**:
-  - Create new tasks with title, description, and priority.
-  - **Link to Projects**: Optionally assign tasks to specific projects or keep them independent.
-- **Analytics**: View personal or company-specific performance metrics.
+Project structure highlights:
 
-## Getting Started
+- `lib/screens/admin` — Admin screens (Dashboard, Analytics, Clients, Projects, Notifications).
+- `lib/screens/client` — Client screens (Home, Tasks, Projects).
+- `lib/widgets` — Reusable UI components.
 
-To run this project locally:
-
-1.  **Prerequisites**: Ensure you have [Flutter](https://docs.flutter.dev/get-started/install) installed.
-2.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    cd clientx
-    ```
-3.  **Install dependencies**:
-    ```bash
-    flutter pub get
-    ```
-4.  **Run the app**:
-    ```bash
-    flutter run
-    ```
-
-## Project Structure
-
-- `lib/screens/admin`: Contains all screens related to the Admin portal (Home, Analytics, Clients, Projects, Notifications).
-- `lib/screens/client`: Contains all screens related to the Client portal (Home, Add Task, Add Project).
-- `lib/widgets`: Reusable UI components.
-
-## Dependencies
-
-- [google_fonts](https://pub.dev/packages/google_fonts): For custom typography (Poppins).
-- [font_awesome_flutter](https://pub.dev/packages/font_awesome_flutter): For additional icons.
+Dependencies include `google_fonts` and `font_awesome_flutter`; see `pubspec.yaml` for the full list.

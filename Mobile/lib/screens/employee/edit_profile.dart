@@ -3,14 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
 import '../../widgets/custom_text_field.dart';
 
-class ManagerEditProfilePage extends StatefulWidget {
-  const ManagerEditProfilePage({super.key});
+class EditProfilePage extends StatefulWidget {
+  const EditProfilePage({super.key});
 
   @override
-  State<ManagerEditProfilePage> createState() => _ManagerEditProfilePageState();
+  State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _ManagerEditProfilePageState extends State<ManagerEditProfilePage> {
+class _EditProfilePageState extends State<EditProfilePage> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
@@ -246,8 +246,8 @@ class _ManagerEditProfilePageState extends State<ManagerEditProfilePage> {
     return Text(
       text,
       style: GoogleFonts.poppins(
-        fontSize: 14,
-        color: const Color(0xFF6DA9E4),
+        fontSize: 14, // Slightly larger than typical body text
+        color: const Color(0xFF6DA9E4), // Light blue color for labels
         fontWeight: FontWeight.w500,
       ),
     );

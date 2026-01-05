@@ -1,217 +1,297 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class AdminHomePage extends StatelessWidget {
+import '../../services/api_service.dart';
+import '../../models/user_model.dart';
+import '../../models/task_model.dart';
+
+class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
 
   @override
+  State<AdminHomePage> createState() => _AdminHomePageState();
+}
+
+class _AdminHomePageState extends State<AdminHomePage> {
+  User? _user;
+  Map<String, dynamic> _stats = {};
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final user = await ApiService.getProfile();
+    final stats = await ApiService.getAdminDashboardStats();
+    final tasks = await ApiService.getAllTasks();
+
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _stats = stats;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50], // Light background for contrast
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Section with Primary Color
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 60, 16, 30),
-              decoration: const BoxDecoration(
-                color: Color(0xFF182C4C),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
+    // Filter tasks locally
+    final activeTasks = _tasks
+        .where((t) => t.status == 'todo' || t.status == 'in_progress')
+        .take(3)
+        .toList();
+    final overdueTasks = _tasks
+        .where((t) {
+          if (t.dueDate == null) return false;
+          final due = DateTime.tryParse(t.dueDate!);
+          return due != null &&
+              due.isBefore(DateTime.now()) &&
+              t.status != 'completed';
+        })
+        .take(3)
+        .toList();
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Header Section with Primary Color
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+            decoration: const BoxDecoration(
+              color: Color(0xFF182C4C),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Tile
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Tile
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: CircleAvatar(
+                      radius: 30,
+                      backgroundColor: const Color(0xFF182C4C),
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                    title: Text(
+                      _user?.username ?? 'Admin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF182C4C),
+                      ),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        const Icon(
+                          Icons.verified_user, // Or any status icon
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _user?.role?.toUpperCase() ?? 'ADMINISTRATOR',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        radius: 30,
-                        backgroundColor: const Color(0xFF182C4C),
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                      title: Text(
-                        'John Doe', // TODO: Replace with actual user name
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF182C4C),
-                        ),
-                      ),
-                      subtitle: Row(
+                    trailing: IconButton(
+                      icon: const Icon(Icons.settings),
+                      onPressed: () {
+                        // Navigate to settings or profile
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Stats Row
+                Row(
+                  children: [
+                    _buildStatCard(
+                      'Total Employee',
+                      '${_stats['total_employees'] ?? 0}',
+                      Colors.blue,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildStatCard(
+                      'Total Project',
+                      '${_stats['total_projects'] ?? 0}',
+                      Colors.orange,
+                    ),
+                    const SizedBox(width: 12),
+                    _buildStatCard(
+                      'Total Task',
+                      '${_stats['total_tasks']}',
+                      Colors.purple,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Body Content (Tasks)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Tasks Section Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF182C4C),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(
-                            Icons.verified_user, // Or any status icon
-                            size: 14,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(width: 4),
                           Text(
-                            'Administrator',
+                            'Active Tasks',
                             style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              // Navigate to all tasks
+                            },
+                            child: Text(
+                              'View All',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () {
-                          // Navigate to settings or profile
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Stats Row
-                  Row(
-                    children: [
-                      _buildStatCard('Total Client', '10', Colors.blue),
-                      const SizedBox(width: 12),
-                      _buildStatCard('Total Project', '5', Colors.orange),
-                      const SizedBox(width: 12),
-                      _buildStatCard('Total Task', '15', Colors.purple),
+                      const SizedBox(height: 8),
+                      const SizedBox(height: 8),
+                      // Task Tiles
+                      if (activeTasks.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'No active tasks',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      else
+                        ...activeTasks.map(
+                          (task) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: _buildTaskTile(
+                              title: task.title,
+                              manager: task.assignedTo.isNotEmpty
+                                  ? task.assignedTo.join(', ')
+                                  : 'Unassigned',
+                              progress: task.status == 'in_progress'
+                                  ? 0.5
+                                  : 0.0,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
+                const SizedBox(height: 12),
 
-            // Body Content (Tasks)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Tasks Section Header
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF182C4C),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Active Tasks',
-                              style: GoogleFonts.poppins(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                // Navigate to all tasks
-                              },
-                              child: Text(
-                                'View All',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Task Tiles
-                        _buildTaskTile(
-                          title: 'Mobile App Redesign',
-                          manager: 'Alice Smith',
-                          progress: 0.75,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Backend API Integration',
-                          manager: 'Bob Jones',
-                          progress: 0.40,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTaskTile(
-                          title: 'Marketing Campaign',
-                          manager: 'Charlie Brown',
-                          progress: 0.90,
-                        ),
-                      ],
-                    ),
+                // Overdue Tasks Section
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF182C4C),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Overdue Tasks Section
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF182C4C),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Overdue Tasks',
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Overdue Tasks',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: Text(
+                              'View All',
                               style: GoogleFonts.poppins(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
                                 color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            TextButton(
-                              onPressed: () {},
-                              child: Text(
-                                'View All',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const SizedBox(height: 8),
+                      if (overdueTasks.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            'No overdue tasks',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      else
+                        ...overdueTasks.map(
+                          (task) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: _buildOverdueTaskTile(
+                              title: task.title,
+                              deadline: task.dueDate ?? 'N/A',
+                              progress: 0.0, // Overdue implies incomplete
                             ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        _buildOverdueTaskTile(
-                          title: 'Website Maintenance',
-                          deadline: 'Oct 24, 2025',
-                          progress: 0.95,
-                        ),
-                        const SizedBox(height: 8),
-                        _buildOverdueTaskTile(
-                          title: 'Server Migration',
-                          deadline: 'Nov 01, 2025',
-                          progress: 0.20,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -219,7 +299,7 @@ class AdminHomePage extends StatelessWidget {
   Widget _buildStatCard(String title, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),

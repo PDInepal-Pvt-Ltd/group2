@@ -1,11 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
+import '../../models/task_model.dart';
 
-class ManagerAnalyticsScreen extends StatelessWidget {
+class ManagerAnalyticsScreen extends StatefulWidget {
   const ManagerAnalyticsScreen({super.key});
 
   @override
+  State<ManagerAnalyticsScreen> createState() => _ManagerAnalyticsScreenState();
+}
+
+class _ManagerAnalyticsScreenState extends State<ManagerAnalyticsScreen> {
+  Map<String, dynamic> _stats = {};
+  List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final stats = await ApiService.getAdminDashboardStats();
+    final tasks = await ApiService.getMyTasks();
+    if (mounted) {
+      setState(() {
+        _stats = stats;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SingleChildScrollView(
@@ -69,25 +101,25 @@ class ManagerAnalyticsScreen extends StatelessWidget {
       children: [
         _buildStatCard(
           title: 'Total Projects',
-          value: '12',
+          value: '${_stats['total_projects'] ?? 0}',
           icon: Icons.folder_open,
           color: Colors.blue,
         ),
         _buildStatCard(
-          title: 'Active Tasks',
-          value: '5',
+          title: 'Assigned Tasks',
+          value: '${_tasks.length}',
           icon: Icons.task_alt,
           color: Colors.orange,
         ),
         _buildStatCard(
-          title: 'Hours Spent',
-          value: '128',
-          icon: Icons.timer,
+          title: 'Total Employees',
+          value: '${_stats['total_employees'] ?? 0}',
+          icon: Icons.people,
           color: Colors.purple,
         ),
         _buildStatCard(
-          title: 'Completed',
-          value: '8',
+          title: 'Total Tasks',
+          value: '${_stats['total_tasks'] ?? 0}',
           icon: Icons.check_circle_outline,
           color: Colors.green,
         ),
@@ -252,21 +284,31 @@ class ManagerAnalyticsScreen extends StatelessWidget {
               ),
             ),
           ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
-            separatorBuilder: (context, index) => const SizedBox(height: 4),
-            itemBuilder: (context, index) {
-              return _buildActivityTile(index);
-            },
-          ),
+          if (_tasks.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'No recent activity',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _tasks.length > 5 ? 5 : _tasks.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final task = _tasks[index];
+                return _buildActivityTile(task);
+              },
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildActivityTile(int index) {
+  Widget _buildActivityTile(Task task) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -279,15 +321,15 @@ class ManagerAnalyticsScreen extends StatelessWidget {
           child: const Icon(Icons.history, color: Colors.blue, size: 20),
         ),
         title: Text(
-          'Project "Alpha" status updated',
+          'Task "${task.title}" Status',
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          'Updated to "In Progress"',
+          'Status: ${task.status.toUpperCase()}',
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
         trailing: Text(
-          '2h ago',
+          task.dueDate != null ? task.dueDate!.split('T')[0] : 'No date',
           style: TextStyle(fontSize: 12, color: Colors.grey[400]),
         ),
       ),

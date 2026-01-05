@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
 
-class ManagerNotificationScreen extends StatefulWidget {
-  const ManagerNotificationScreen({super.key});
+class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
 
   @override
-  State<ManagerNotificationScreen> createState() =>
-      _ManagerNotificationScreenState();
+  State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _ManagerNotificationScreenState extends State<ManagerNotificationScreen> {
+class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
@@ -21,7 +20,7 @@ class _ManagerNotificationScreenState extends State<ManagerNotificationScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    final notifications = await ApiService.getManagerNotifications();
+    final notifications = await ApiService.getEmployeeNotifications();
     if (mounted) {
       setState(() {
         _notifications = notifications;
@@ -39,6 +38,10 @@ class _ManagerNotificationScreenState extends State<ManagerNotificationScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
+        toolbarHeight: 70,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+        ),
         title: Text(
           'Notifications',
           style: GoogleFonts.poppins(
@@ -52,9 +55,23 @@ class _ManagerNotificationScreenState extends State<ManagerNotificationScreen> {
       ),
       body: _notifications.isEmpty
           ? Center(
-              child: Text(
-                'No notifications',
-                style: GoogleFonts.poppins(color: Colors.grey),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No notifications',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
             )
           : RefreshIndicator(
@@ -86,10 +103,9 @@ class _ManagerNotificationScreenState extends State<ManagerNotificationScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),

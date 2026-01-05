@@ -1,18 +1,16 @@
+import 'package:clientx/screens/admin/project_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
-import '../employee/add_project.dart';
-import '../employee/add_task.dart';
-import 'project_detail.dart';
 
-class AdminProjects extends StatefulWidget {
-  const AdminProjects({super.key});
+class ManagerProjects extends StatefulWidget {
+  const ManagerProjects({super.key});
 
   @override
-  State<AdminProjects> createState() => _AdminProjectsState();
+  State<ManagerProjects> createState() => _ManagerProjectsState();
 }
 
-class _AdminProjectsState extends State<AdminProjects> {
+class _ManagerProjectsState extends State<ManagerProjects> {
   List<dynamic> _projects = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -30,6 +28,9 @@ class _AdminProjectsState extends State<AdminProjects> {
       _errorMessage = null;
     });
     try {
+      // Fetching all projects or assigned projects?
+      // Assuming getProjects returns relevant projects for the user or all public projects.
+      // Manager might see all projects they manage.
       final projects = await ApiService.getProjects();
       if (mounted) {
         setState(() {
@@ -68,53 +69,7 @@ class _AdminProjectsState extends State<AdminProjects> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
         ),
         toolbarHeight: 80,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onSelected: (value) async {
-              if (value == 'project') {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddProjectScreen(),
-                  ),
-                );
-                if (result == true) _loadProjects();
-              } else if (value == 'task') {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddTaskScreen(),
-                  ),
-                );
-                _loadProjects();
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              PopupMenuItem(
-                value: 'project',
-                child: Row(
-                  children: [
-                    Icon(Icons.work_outline, color: const Color(0xFF182C4C)),
-                    const SizedBox(width: 8),
-                    Text('Add Project', style: GoogleFonts.poppins()),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'task',
-                child: Row(
-                  children: [
-                    Icon(Icons.task_alt, color: const Color(0xFF182C4C)),
-                    const SizedBox(width: 8),
-                    Text('Add Task', style: GoogleFonts.poppins()),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-        ],
+        // Actions removed as Manager cannot create new projects
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

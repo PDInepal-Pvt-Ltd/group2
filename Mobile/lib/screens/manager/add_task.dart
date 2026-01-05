@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
 
 class ManagerAddTaskScreen extends StatefulWidget {
   const ManagerAddTaskScreen({super.key});
@@ -12,16 +13,27 @@ class _ManagerAddTaskScreenState extends State<ManagerAddTaskScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String? _selectedPriority;
-  final List<String> _priorities = ['Low', 'Medium', 'High'];
+  String _selectedPriority = 'medium';
+  final List<String> _priorities = ['low', 'medium', 'high', 'urgent'];
 
-  String? _selectedProject;
-  final List<String> _projects = [
-    'Independent',
-    'Mobile App Redesign',
-    'Web Portal',
-    'Marketing Campaign',
-  ];
+  String? _selectedProjectId;
+  List<Map<String, dynamic>> _projects = [];
+  DateTime? _selectedDueDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProjects();
+  }
+
+  Future<void> _loadProjects() async {
+    final projects = await ApiService.getProjects();
+    if (mounted) {
+      setState(() {
+        _projects = projects;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +108,7 @@ class _ManagerAddTaskScreenState extends State<ManagerAddTaskScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedProject,
+                value: _selectedProjectId,
                 decoration: InputDecoration(
                   labelText: 'Project (Optional)',
                   border: OutlineInputBorder(
@@ -105,19 +117,22 @@ class _ManagerAddTaskScreenState extends State<ManagerAddTaskScreen> {
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                items: _projects.map((String project) {
-                  return DropdownMenuItem<String>(
-                    value: project,
-                    child: Text(project),
-                  );
-                }).toList(),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('Independent'),
+                  ),
+                  ..._projects.map((project) {
+                    return DropdownMenuItem<String>(
+                      value: project['id'].toString(),
+                      child: Text(project['name'] ?? 'Unnamed Project'),
+                    );
+                  }),
+                ],
                 onChanged: (newValue) {
                   setState(() {
-                    _selectedProject = newValue;
+                    _selectedProjectId = newValue;
                   });
-                },
-                validator: (value) {
-                  return null; // Optional
                 },
               ),
               const SizedBox(height: 16),
@@ -134,32 +149,87 @@ class _ManagerAddTaskScreenState extends State<ManagerAddTaskScreen> {
                 items: _priorities.map((String priority) {
                   return DropdownMenuItem<String>(
                     value: priority,
-                    child: Text(priority),
+                    child: Text(priority.toUpperCase()),
                   );
                 }).toList(),
                 onChanged: (newValue) {
                   setState(() {
-                    _selectedPriority = newValue;
+                    _selectedPriority = newValue!;
                   });
                 },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a priority';
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2101),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _selectedDueDate = picked;
+                    });
                   }
-                  return null;
                 },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Due Date',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    suffixIcon: const Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    _selectedDueDate == null
+                        ? 'Select Date'
+                        : "${_selectedDueDate!.toLocal()}".split(' ')[0],
+                  ),
+                ),
               ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      // TODO: Implement task creation logic
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Creating Task...')),
                       );
+
+                      final taskData = {
+                        'title': _titleController.text,
+                        'description': _descriptionController.text,
+                        'priority': _selectedPriority,
+                        'group': _selectedProjectId != null
+                            ? int.parse(_selectedProjectId!)
+                            : null,
+                        'due_date': _selectedDueDate?.toIso8601String().split(
+                          'T',
+                        )[0],
+                        'status': 'todo',
+                      };
+
+                      final result = await ApiService.createTask(taskData);
+
+                      if (!mounted) return;
+
+                      if (result['success']) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Task Created Successfully!'),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'])),
+                        );
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
